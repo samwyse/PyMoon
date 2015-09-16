@@ -24,10 +24,15 @@ given date; and phase_hunt(), which given a date, finds the dates of
 the nearest full moon, new moon, etc.
 """
 
-from math import sin, cos, floor, sqrt, pi, tan, atan # asin, atan2
 from bisect import bisect
+from math import sin, cos, floor, sqrt, pi, tan, atan
 
-import DateTime
+try:
+    # get mx from http://www.egenix.com/products/python/mxBase/#Download
+    from mx import DateTime
+except ImportError:
+    # not in default location, try clones, etc.
+    import DateTime
 
 __TODO__ = [
     'Add command-line interface.',
@@ -37,7 +42,7 @@ __TODO__ = [
 # Precision used when describing the moon's phase in textual format,
 # in phase_string().
 PRECISION = 0.05
-NEW =   0 / 4.0
+NEW = 0 / 4.0
 FIRST = 1 / 4.0
 FULL = 2 / 4.0
 LAST = 3 / 4.0
@@ -78,13 +83,17 @@ class MoonPhase:
         self.phase_text = phase_string(self.phase)
 
     def __getattr__(self, a):
+        # Called when a lookup has not found the attribute in the usual places
         if a in ['new_date', 'q1_date', 'full_date', 'q3_date',
                  'nextnew_date']:
-
-            (self.new_date, self.q1_date, self.full_date,
-             self.q3_date, self.nextnew_date) = phase_hunt(self.date)
-
-            return getattr(self,a)
+            (
+                self.new_date,
+                self.q1_date,
+                self.full_date,
+                self.q3_date,
+                self.nextnew_date
+                ) = phase_hunt(self.date)
+            return getattr(self, a)
         raise AttributeError(a)
 
     def __repr__(self):
@@ -131,7 +140,7 @@ class AstronomicalConstants:
     # Sun's angular size, in degrees, at semi-major axis distance
     sun_angular_size_smaxis = 0.533128
 
-    ## Elements of the Moon's orbit, epoch 1980.0
+    # Elements of the Moon's orbit, epoch 1980.0
 
     # Moon's mean longitude at the epoch
     moon_mean_longitude_epoch = 64.975464
@@ -158,22 +167,36 @@ class AstronomicalConstants:
     # Synodic month (new Moon to new Moon), in days
     synodic_month = 29.53058868
 
-    # Base date for E. W. Brown's numbered series of lunations (1923 January 16)
+    # Base date for E. W. Brown's numbered series of lunations
+    # (1923 January 16)
     lunations_base = 2423436.0
 
-    ## Properties of the Earth
-
+    # Properties of the Earth
     earth_radius = 6378.16
 
 c = AstronomicalConstants()
 
-# Little handy mathematical functions.
 
-fixangle = lambda a: a - 360.0 * floor(a/360.0)
-torad = lambda d: d * pi / 180.0
-todeg = lambda r: r * 180.0 / pi
-dsin = lambda d: sin(torad(d))
-dcos = lambda d: cos(torad(d))
+# Little handy mathematical functions.
+def fixangle(a):
+    a - 360.0 * floor(a/360.0)
+
+
+def torad(d):
+    d * pi / 180.0
+
+
+def todeg(r):
+    r * 180.0 / pi
+
+
+def dsin(d):
+    sin(torad(d))
+
+
+def dcos(d):
+    cos(torad(d))
+
 
 def phase_string(p):
     phase_strings = (
@@ -274,7 +297,7 @@ def phase(phase_date=DateTime.now()):
     #
     # Calculation of the Moon's inclination
     # unused for phase calculation.
-    
+
     # Corrected longitude of the node
     # NP = MN - 0.16 * sin(torad(M))
 
@@ -288,7 +311,8 @@ def phase(phase_date=DateTime.now()):
     # lambda_moon = todeg(atan2(y,x)) + NP
 
     # Ecliptic latitude (unused?)
-    # BetaM = todeg(asin(sin(torad(lPP - NP)) * sin(torad(c.moon_inclination))))
+    # BetaM = todeg(asin(sin(torad(lPP - NP)) *
+    #   sin(torad(c.moon_inclination))))
 
     #######
     #
@@ -301,8 +325,9 @@ def phase(phase_date=DateTime.now()):
     moon_phase = (1 - cos(torad(moon_age))) / 2.0
 
     # Calculate distance of Moon from the centre of the Earth
-    moon_dist = (c.moon_smaxis * (1 - c.moon_eccentricity**2))\
-                / (1 + c.moon_eccentricity * cos(torad(MmP + mEc)))
+    moon_dist = (
+        (c.moon_smaxis * (1 - c.moon_eccentricity**2)) /
+        (1 + c.moon_eccentricity * cos(torad(MmP + mEc))))
 
     # Calculate Moon's angular diameter
     moon_diam_frac = moon_dist / c.moon_smaxis
@@ -314,7 +339,7 @@ def phase(phase_date=DateTime.now()):
     res = {
         'phase': fixangle(moon_age) / 360.0,
         'illuminated': moon_phase,
-        'age': c.synodic_month * fixangle(moon_age) / 360.0 ,
+        'age': c.synodic_month * fixangle(moon_age) / 360.0,
         'distance': moon_dist,
         'angular_diameter': moon_angular_diameter,
         'sun_distance': sun_dist,
@@ -332,12 +357,14 @@ def phase_hunt(sdate=DateTime.now()):
     which bound the current lunation.
     """
 
-    if not hasattr(sdate,'jdn'):
+    if not hasattr(sdate, 'jdn'):
         sdate = DateTime.DateTimeFromJDN(sdate)
 
     adate = sdate + DateTime.RelativeDateTime(days=-45)
 
-    k1 = floor((adate.year + ((adate.month - 1) * (1.0/12.0)) - 1900) * 12.3685)
+    k1 = floor((adate.year +
+                ((adate.month - 1) * (1.0/12.0)) -
+                1900) * 12.3685)
 
     nt1 = meanphase(adate, k1)
     adate = nt1
@@ -347,15 +374,15 @@ def phase_hunt(sdate=DateTime.now()):
     while 1:
         adate = adate + c.synodic_month
         k2 = k1 + 1
-        nt2 = meanphase(adate,k2)
+        nt2 = meanphase(adate, k2)
         if nt1 <= sdate < nt2:
             break
         nt1 = nt2
         k1 = k2
 
     phases = list(map(truephase,
-                 [k1,    k1,    k1,    k1,    k2],
-                 [0/4.0, 1/4.0, 2/4.0, 3/4.0, 0/4.0]))
+                      [k1,    k1,    k1,    k1,    k2],
+                      [0/4.0, 1/4.0, 2/4.0, 3/4.0, 0/4.0]))
 
     return phases
 # phase_hunt()
@@ -373,11 +400,11 @@ def meanphase(sdate, k):
     """
 
     # Time in Julian centuries from 1900 January 0.5
-    if not hasattr(sdate,'jdn'):
-        delta_t = sdate - DateTime.DateTime(1900,1,1,12).jdn
+    if not hasattr(sdate, 'jdn'):
+        delta_t = sdate - DateTime.DateTime(1900, 1, 1, 12).jdn
         t = delta_t / 36525
     else:
-        delta_t = sdate - DateTime.DateTime(1900,1,1,12)
+        delta_t = sdate - DateTime.DateTime(1900, 1, 1, 12)
         t = delta_t.days / 36525
 
     # square for frequent use
@@ -387,8 +414,8 @@ def meanphase(sdate, k):
 
     nt1 = (
         2415020.75933 + c.synodic_month * k + 0.0001178 * t2 -
-        0.000000155 * t3 + 0.00033 * dsin(166.56 + 132.87 * t -
-        0.009173 * t2)
+        0.000000155 * t3 + 0.00033 *
+        dsin(166.56 + 132.87 * t - 0.009173 * t2)
         )
 
     return nt1
@@ -399,8 +426,6 @@ def truephase(k, tphase):
     """Given a K value used to determine the mean phase of the new
     moon, and a phase selector (0.0, 0.25, 0.5, 0.75), obtain the
     true, corrected phase time."""
-
-    apcor = False
 
     # add phase to new moon time
     k = k + tphase
@@ -413,8 +438,8 @@ def truephase(k, tphase):
     # Mean time of phase
     pt = (
         2415020.75933 + c.synodic_month * k + 0.0001178 * t2 -
-        0.000000155 * t3 + 0.00033 * dsin(166.56 + 132.87 * t -
-        0.009173 * t2)
+        0.000000155 * t3 + 0.00033 *
+        dsin(166.56 + 132.87 * t - 0.009173 * t2)
         )
 
     # Sun's mean anomaly
@@ -427,9 +452,7 @@ def truephase(k, tphase):
     f = 21.2964 + 390.67050646 * k - 0.0016528 * t2 - 0.00000239 * t3
 
     if (tphase < 0.01) or (abs(tphase - 0.5) < 0.01):
-
         # Corrections for New and Full Moon
-
         pt = pt + (
             (0.1734 - 0.000393 * t) * dsin(m)
             + 0.0021 * dsin(2 * m)
@@ -445,10 +468,7 @@ def truephase(k, tphase):
             + 0.0010 * dsin(2 * f - mprime)
             + 0.0005 * dsin(m + 2 * mprime)
             )
-
-        apcor = True
     elif (abs(tphase - 0.25) < 0.01) or (abs(tphase - 0.75) < 0.01):
-
         pt = pt + (
             (0.1721 - 0.0004 * t) * dsin(m)
             + 0.0021 * dsin(2 * m)
@@ -472,9 +492,7 @@ def truephase(k, tphase):
         else:
             #  Last quarter correction
             pt = pt + -0.0028 + 0.0004 * dcos(m) - 0.0003 * dcos(mprime)
-        apcor = True
-
-    if not apcor:
+    else:
         raise ValueError(
             "TRUEPHASE called with invalid phase selector",
             tphase)
@@ -483,28 +501,23 @@ def truephase(k, tphase):
 # truephase()
 
 
-def kepler(m, ecc):
+def kepler(m, ecc, epsilon=1e-6):
     """Solve the equation of Kepler."""
 
-    epsilon = 1e-6
-
-    m = torad(m)
-    e = m
+    e = m = torad(m)
     while 1:
         delta = e - ecc * sin(e) - m
-        e = e - delta / (1.0 - ecc * cos(e))
-
+        e -= delta / (1.0 - ecc * cos(e))
         if abs(delta) <= epsilon:
             break
-
     return e
 
-#
-##
-#
 
-if __name__ == '__main__':
+def main():
     m = MoonPhase()
     s = """The moon is %s, %.1f%% illuminated, %.1f days old.""" %\
         (m.phase_text, m.illuminated * 100, m.age)
     print (s)
+
+if __name__ == '__main__':
+    main()
