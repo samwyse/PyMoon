@@ -25,11 +25,9 @@ the nearest full moon, new moon, etc.
 """
 
 from math import sin, cos, floor, sqrt, pi, tan, atan # asin, atan2
-import bisect
-try:
-    import DateTime
-except ImportError:
-    from mx import DateTime
+from bisect import bisect
+
+import DateTime
 
 __TODO__ = [
     'Add command-line interface.',
@@ -189,7 +187,7 @@ def phase_string(p):
         (NEXTNEW - PRECISION, "waning crescent"),
         (NEXTNEW + PRECISION, "new"))
 
-    i = bisect.bisect([a[0] for a in phase_strings], p)
+    i = bisect([a[0] for a in phase_strings], p)
 
     return phase_strings[i][1]
 
