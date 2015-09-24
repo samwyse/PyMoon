@@ -179,23 +179,23 @@ c = AstronomicalConstants()
 
 # Little handy mathematical functions.
 def fixangle(a):
-    a - 360.0 * floor(a/360.0)
+    return a - 360.0 * floor(a / 360.0)
 
 
 def torad(d):
-    d * pi / 180.0
+    return d * pi / 180.0
 
 
 def todeg(r):
-    r * 180.0 / pi
+    return r * 180.0 / pi
 
 
 def dsin(d):
-    sin(torad(d))
+    return sin(torad(d))
 
 
 def dcos(d):
-    cos(torad(d))
+    return cos(torad(d))
 
 
 def phase_string(p):
@@ -237,13 +237,13 @@ def phase(phase_date=DateTime.now()):
         day = phase_date - c.epoch
 
     # Mean anomaly of the Sun
-    N = fixangle((360/365.2422) * day)
+    N = fixangle((360 / 365.2422) * day)
     # Convert from perigee coordinates to epoch 1980
     M = fixangle(N + c.ecliptic_longitude_epoch - c.ecliptic_longitude_perigee)
 
     # Solve Kepler's equation
     Ec = kepler(M, c.eccentricity)
-    Ec = sqrt((1 + c.eccentricity) / (1 - c.eccentricity)) * tan(Ec/2.0)
+    Ec = sqrt((1 + c.eccentricity) / (1 - c.eccentricity)) * tan(Ec / 2.0)
     # True anomaly
     Ec = 2 * todeg(atan(Ec))
     # Suns's geometric ecliptic longuitude
@@ -269,7 +269,7 @@ def phase(phase_date=DateTime.now()):
     # Moon's ascending node mean longitude
     # MN = fixangle(c.node_mean_longitude_epoch - 0.0529539 * day)
 
-    evection = 1.2739 * sin(torad(2*(moon_longitude - lambda_sun) - MM))
+    evection = 1.2739 * sin(torad(2 * (moon_longitude - lambda_sun) - MM))
 
     # Annual equation
     annual_eq = 0.1858 * sin(torad(M))
@@ -289,7 +289,7 @@ def phase(phase_date=DateTime.now()):
     lP = moon_longitude + evection + mEc - annual_eq + A4
 
     # Variation
-    variation = 0.6583 * sin(torad(2*(lP - lambda_sun)))
+    variation = 0.6583 * sin(torad(2 * (lP - lambda_sun)))
 
     # True longitude
     lPP = lP + variation
@@ -363,7 +363,7 @@ def phase_hunt(sdate=DateTime.now()):
     adate = sdate + DateTime.RelativeDateTime(days=-45)
 
     k1 = floor((adate.year +
-                ((adate.month - 1) * (1.0/12.0)) -
+                ((adate.month - 1) * (1.0 / 12.0)) -
                 1900) * 12.3685)
 
     nt1 = meanphase(adate, k1)
@@ -513,11 +513,8 @@ def kepler(m, ecc, epsilon=1e-6):
     return e
 
 
-def main():
+if __name__ == '__main__':
     m = MoonPhase()
     s = """The moon is %s, %.1f%% illuminated, %.1f days old.""" %\
         (m.phase_text, m.illuminated * 100, m.age)
     print (s)
-
-if __name__ == '__main__':
-    main()
